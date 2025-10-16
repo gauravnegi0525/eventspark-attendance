@@ -1,6 +1,7 @@
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Calendar, UserPlus, ScanLine, LayoutDashboard } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 
 const Navigation = () => {
   const location = useLocation();
@@ -45,10 +46,31 @@ const Navigation = () => {
                 </Button>
               );
             })}
+            {/* auth button */}
+            <AuthButton />
           </div>
         </div>
       </div>
     </nav>
+  );
+};
+
+const AuthButton = () => {
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
+
+  if (user) {
+    return (
+      <Button onClick={async () => { await signOut(); navigate('/'); }} size="sm">
+        Logout
+      </Button>
+    );
+  }
+
+  return (
+    <Button asChild size="sm">
+      <Link to="/login">Login</Link>
+    </Button>
   );
 };
 
