@@ -71,3 +71,32 @@ Yes, you can!
 To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
 
 Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+
+## Connecting this project to Supabase (Auth + DB)
+
+This project is pre-wired to work with Supabase. Follow these steps to connect and test authentication.
+
+1. Create a Supabase project at https://app.supabase.com and copy the Project URL and anon (publishable) key.
+
+2. Create a `.env` file in the project root (or update it) with these entries:
+
+```env
+VITE_SUPABASE_URL="https://your-project-ref.supabase.co"
+VITE_SUPABASE_PUBLISHABLE_KEY="your-anon-publishable-key"
+```
+
+3. (Optional) Run the SQL in `supabase/sql/init.sql` in the Supabase SQL editor to create example tables.
+
+4. In the Supabase dashboard go to Authentication → Settings and enable Email signups. Add OAuth providers if desired.
+
+5. Start the dev server and test:
+
+```powershell
+npm install
+npm run dev
+```
+
+Open the app, click Login, and sign up / sign in to verify the flow.
+
+If you need role-based access, create a `roles` table or add metadata to `auth.users` and enforce policies in Supabase or in the app's `RequireAuth` wrapper.
+
