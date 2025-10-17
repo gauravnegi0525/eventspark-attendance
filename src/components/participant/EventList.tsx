@@ -3,6 +3,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { getAllEvents, Event } from '@/lib/mockApi';
 import { Calendar, MapPin, Users } from 'lucide-react';
+import { useState } from 'react';
+import { isAfter } from 'date-fns';
 import { format } from 'date-fns';
 
 interface EventListProps {
@@ -10,7 +12,13 @@ interface EventListProps {
 }
 
 const EventList = ({ onSelectEvent }: EventListProps) => {
-  const events = getAllEvents();
+  const [showPast, setShowPast] = useState(false);
+  const eventsAll = getAllEvents();
+  const now = new Date();
+  const events = eventsAll.filter((ev) => {
+    const evDate = new Date(ev.date);
+    return showPast ? true : isAfter(evDate, now) || evDate.toDateString() === now.toDateString();
+  });
 
   if (events.length === 0) {
     return (
@@ -22,8 +30,16 @@ const EventList = ({ onSelectEvent }: EventListProps) => {
   }
 
   return (
-    <div className="grid gap-4">
-      {events.map((event) => (
+    <div className="space-y-4">
+      <div className="flex items-center justify-end">
+        <Button variant="ghost" size="sm" onClick={() => setShowPast((s) => !s)} className="gap-2">
+          <Calendar className="h-4 w-4" />
+          {showPast ? 'Hide past events' : 'Show past events'}
+        </Button>
+      </div>
+
+      <div className="grid gap-4">
+        {events.map((event) => (
         <Card key={event.id} className="hover:shadow-hover transition-shadow">
           <CardHeader>
             <div className="flex items-start justify-between">
@@ -59,7 +75,8 @@ const EventList = ({ onSelectEvent }: EventListProps) => {
             </Button>
           </CardContent>
         </Card>
-      ))}
+        ))}
+      </div>
     </div>
   );
 };

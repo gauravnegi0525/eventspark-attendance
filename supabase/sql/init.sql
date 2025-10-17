@@ -37,3 +37,21 @@ create table if not exists registrations (
 
 -- Add an index for lookup by entry_uuid
 create index if not exists idx_participants_entry_uuid on participants(entry_uuid);
+
+-- Prevent duplicate registrations for the same event by email (case-insensitive)
+do $$ begin
+  if not exists (
+    select 1 from pg_indexes where tablename = 'participants' and indexname = 'uniq_event_email'
+  ) then
+    execute 'create unique index uniq_event_email on participants (event_id, lower(email));';
+  end if;
+end$$;
+
+-- Prevent duplicate team names for the same event (case-insensitive)
+do $$ begin
+  if not exists (
+    select 1 from pg_indexes where tablename = 'participants' and indexname = 'uniq_event_teamname'
+  ) then
+    execute 'create unique index uniq_event_teamname on participants (event_id, lower(team_name));';
+  end if;
+end$$;

@@ -11,24 +11,53 @@ const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isSigningUp, setIsSigningUp] = useState(false);
-  const { signIn, signUp } = useAuth();
+  const [loading, setLoading] = useState(false);
+  const { signIn, signUp, user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const from = (location.state as any)?.from?.pathname || '/admin';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    // simple client-side validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return toast.error('Please enter a valid email address');
+    }
 
-    if (isSigningUp) {
-      const { error } = await signUp(email, password);
-      if (error) return toast.error(error.message || 'Sign up failed');
-      toast.success('Sign up successful! Please check your email to confirm if required.');
-      navigate(from, { replace: true });
-    } else {
-      const { error } = await signIn(email, password);
-      if (error) return toast.error(error.message || 'Sign in failed');
-      toast.success('Signed in successfully');
-      navigate(from, { replace: true });
+    if (password.length < 8) {
+      return toast.error('Password must be at least 8 characters');
+    }
+
+    if (loading) return; // prevent duplicate submissions
+
+    setLoading(true);
+    try {
+      if (isSigningUp) {
+        const { error } = await signUp(email, password);
+        if (error) {
+          // Common message when user already exists
+          if (error.message?.toLowerCase().includes('already')) {
+            toast.error('An account with this email already exists. Try signing in instead.');
+          } else {
+            toast.error(error.message || 'Sign up failed');
+          }
+          return;
+        }
+
+        toast.success('Sign up successful! Please check your email to confirm if required.');
+        navigate(from, { replace: true });
+      } else {
+        const { error } = await signIn(email, password);
+        if (error) {
+          toast.error(error.message || 'Sign in failed');
+          return;
+        }
+        toast.success('Signed in successfully');
+        navigate(from, { replace: true });
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -54,13 +83,16 @@ const Login = () => {
                 <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
               </div>
               <div className="flex items-center justify-between">
-                <Button type="submit" className="gap-2">
-                  {isSigningUp ? 'Create account' : 'Sign in'}
+                <Button type="submit" className="gap-2" disabled={loading}>
+                  {loading ? (isSigningUp ? 'Signing up...' : 'Signing in...') : (isSigningUp ? 'Create account' : 'Sign in')}
                 </Button>
-                <Button variant="ghost" onClick={() => setIsSigningUp((s) => !s)}>
+                <Button variant="ghost" onClick={() => setIsSigningUp((s) => !s)} disabled={!!user}>
                   {isSigningUp ? 'Have an account? Sign in' : 'Need an account? Sign up'}
                 </Button>
               </div>
+              {user && (
+                <p className="text-xs text-muted-foreground mt-2">You are already signed in.</p>
+              )}
             </form>
           </CardContent>
         </Card>

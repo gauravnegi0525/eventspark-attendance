@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Event, createParticipant } from '@/lib/mockApi';
+import { Event, createParticipant, getParticipantsByEventId } from '@/lib/mockApi';
 import { QRCodeSVG } from 'qrcode.react';
 import { Download, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -21,9 +21,13 @@ const RegistrationForm = ({ event, onSuccess }: RegistrationFormProps) => {
   const [formData, setFormData] = useState<Record<string, any>>({});
   const [showQRDialog, setShowQRDialog] = useState(false);
   const [participant, setParticipant] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (loading) return;
+    setLoading(true);
 
     // Validate required fields
     const missingFields = event.formFields
@@ -39,17 +43,47 @@ const RegistrationForm = ({ event, onSuccess }: RegistrationFormProps) => {
     const nameField = event.formFields.find((f) => f.type === 'text' && f.label.toLowerCase().includes('name'));
     const emailField = event.formFields.find((f) => f.type === 'email');
 
+    const nameValue = formData[nameField?.id || ''] || 'Unknown';
+    const emailValue = (formData[emailField?.id || ''] || '').toString().trim();
+
+    // For team events, try to find a field that contains "team" in its label
+    let teamNameValue: string | undefined = undefined;
+    if (event.eventType === 'team') {
+      const teamField = event.formFields.find((f) => f.label.toLowerCase().includes('team'));
+      teamNameValue = teamField ? (formData[teamField.id] || '').toString().trim() : (formData['teamName'] || '').toString().trim();
+      if (teamNameValue === '') teamNameValue = undefined;
+    }
+
+    // Duplicate checks
+    const existing = getParticipantsByEventId(event.id);
+    if (emailValue) {
+      const emailExists = existing.some((p) => p.email && p.email.toLowerCase() === emailValue.toLowerCase());
+      if (emailExists) {
+        toast.error('You (or this email) have already registered for this event');
+        return;
+      }
+    }
+
+    if (teamNameValue) {
+      const teamExists = existing.some((p) => p.teamName && p.teamName.toLowerCase() === teamNameValue?.toLowerCase());
+      if (teamExists) {
+        toast.error('A team with this name has already registered for this event');
+        return;
+      }
+    }
+
     const newParticipant = createParticipant({
       eventId: event.id,
-      name: formData[nameField?.id || ''] || 'Unknown',
-      email: formData[emailField?.id || ''] || '',
-      teamName: event.eventType === 'team' ? formData['teamName'] : undefined,
+      name: nameValue,
+      email: emailValue,
+      teamName: teamNameValue,
       formData,
     });
 
     setParticipant(newParticipant);
     setShowQRDialog(true);
     toast.success('Registration successful!');
+    setLoading(false);
   };
 
   const downloadQR = () => {
@@ -129,8 +163,8 @@ const RegistrationForm = ({ event, onSuccess }: RegistrationFormProps) => {
           </div>
         ))}
 
-        <Button type="submit" className="w-full" size="lg">
-          Complete Registration
+        <Button type="submit" className="w-full" size="lg" disabled={loading}>
+          {loading ? 'Registering...' : 'Complete Registration'}
         </Button>
       </form>
 
